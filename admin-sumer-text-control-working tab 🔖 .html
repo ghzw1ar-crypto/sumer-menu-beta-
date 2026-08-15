@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sumer Menu - Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+
+
+</script>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,Tahoma,sans-serif;margin:0;background:#f5f5f5;color:#222}
+.wrap{max-width:1000px;margin:auto;padding:16px}
+.card{background:#fff;padding:18px;border-radius:14px;margin-bottom:16px;box-shadow:0 2px 12px #0001}
+input,button{width:100%;padding:11px;margin:5px 0;border-radius:9px;border:1px solid #ddd;font-size:16px;box-sizing:border-box}
+button{background:#111;color:#fff;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}
+.danger{background:#b00020}.gray{background:#666}.green{background:#16833b}.orange{background:#a94f28}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{border:1px solid #eee;padding:12px;border-radius:12px;margin:10px 0;background:#fff}
+.item img{width:70px;height:70px;object-fit:cover;float:right;margin-left:10px;border-radius:8px}
+.clear{clear:both}
+.hidden{display:none}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.top button{width:auto;padding:9px 14px}
+.msg{margin-top:8px;font-weight:bold}
+.success{color:#16833b}.error{color:#b00020}
+.syncbar{background:#fff8e6;border:1px solid #f0d27a;padding:10px;border-radius:10px;margin:10px 0}.syncbar button{margin-top:8px}.missing{border:2px dashed #d28a00;background:#fffaf0}.missing-badge{display:inline-block;background:#d28a00;color:#fff;padding:3px 7px;border-radius:7px;font-size:12px;margin-right:5px}.filters{display:grid;grid-template-columns:1fr 220px;gap:8px;margin:12px 0}
+.category-group{margin:18px 0 8px}
+.category-title{font-size:18px;font-weight:900;padding:10px 12px;background:#f1f1f1;border-radius:10px;border-right:5px solid #111}
+.category-count{font-size:13px;color:#666;margin-right:8px;font-weight:normal}
+.delivery-list{display:grid;gap:8px;margin-top:10px}
+.delivery-item{display:flex;align-items:center;gap:8px;border:1px solid #eee;padding:10px;border-radius:12px;background:#fff}
+.delivery-item .info{flex:1}.delivery-item .name{font-weight:800}
+.delivery-item .fee{color:#666;font-size:14px;margin-top:3px}
+.delivery-item button{width:auto;margin:0;padding:8px 12px}
+@media(max-width:600px){
+ .grid{grid-template-columns:1fr}
+ .actions{grid-template-columns:1fr 1fr}
+ .top{align-items:flex-start}
+ .delivery-item{flex-wrap:wrap}
+ .delivery-item .info{min-width:100%}
+}
+</style>
+
+
+
+
+<style id="working-text-size-controls">
+.text-size-panel{margin:8px 0;padding:10px;background:#f7f7f7;border:1px solid #ddd;border-radius:10px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.text-size-panel label{font-size:12px;font-weight:700}
+.text-size-panel select{width:auto;min-width:78px;padding:7px}
+.text-size-panel button{padding:7px 10px}
+.menu-name-text{font-size:var(--item-name-size,18px)!important}
+.menu-price-text{font-size:var(--item-price-size,15px)!important}
+.menu-desc-text{font-size:var(--item-desc-size,13px)!important}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+
+<section id="login" class="card">
+<h2>🍽️ Sumer Menu — تسجيل الدخول</h2>
+<input id="email" type="email" autocomplete="username" placeholder="الإيميل">
+<input id="password" type="password" autocomplete="current-password" placeholder="كلمة السر">
+<button class="orange" id="loginBtn" onclick="login()">دخول</button>
+<div id="loginMsg" class="msg"></div>
+</section>
+
+<section id="panel" class="hidden">
+<div class="card top">
+  <div>
+    <h2 style="margin:0 0 5px">لوحة تحكم Sumer Menu</h2>
+    <small>إدارة الأصناف ومناطق التوصيل من Supabase</small>
+  </div>
+  <button class="gray" onclick="logout()">خروج</button>
+</div>
+
+<div class="card">
+<h3 id="title">➕ إضافة صنف</h3>
+<input id="editId" type="hidden">
+<div class="grid">
+  <input id="name" placeholder="اسم الصنف">
+  <input id="price" type="number" min="0" placeholder="السعر">
+  <input id="category" placeholder="القسم">
+  <input id="image_url" placeholder="رابط الصورة">
+</div>
+<label style="display:block;margin:8px 0">
+  <input id="available" type="checkbox" checked style="width:auto;margin-left:6px">
+  متوفر
+</label>
+<button class="green" onclick="save()">💾 حفظ</button>
+<button class="gray" onclick="clearForm()">إلغاء</button>
+<div id="msg" class="msg"></div>
+</div>
+
+<div class="card">
+<h3>🚚 مناطق التوصيل</h3>
+<p>أضف اسم المنطقة وأجور التوصيل. ستظهر المناطق للزبون داخل السلة.</p>
+<div class="grid">
+  <input id="deliveryName" placeholder="اسم المنطقة — مثال: حي سومر">
+  <input id="deliveryFee" type="number" min="0" placeholder="أجور التوصيل بالدينار">
+</div>
+<button class="green" onclick="addDelivery()">➕ إضافة منطقة</button>
+<div id="deliveryMsg" class="msg"></div>
+<div id="deliveryList" class="delivery-list"></div>
+</div>
+
+<div class="card">
+<div class="top">
+  <h3 style="margin:0">📋 الأصناف</h3>
+  <button class="orange" onclick="load()">تحديث</button>
+</div>
+<div class="filters">
+  <input id="searchItems" type="search" placeholder="🔎 ابحث باسم الصنف..." oninput="renderItems()">
+  <select id="categoryFilter" onchange="renderItems()">
+    <option value="__all__">📂 كل الأقسام</option>
+  </select>
+</div>
+<div class="syncbar">
+  <div id="syncMsg">🔎 تتم مطابقة أصناف الموقع مع Supabase...</div>
+  <button class="green" onclick="syncMissingItems()">➕ إضافة كل الأصناف الناقصة إلى Supabase</button>
+</div>
+<div id="count" style="margin-top:8px"></div>
+<div id="items">جارٍ التحميل...</div>
+</div>
+
+</section>
+</div>
+
+<script>
+const SUPABASE_URL="https://glbugvsorxtzixgexdak.supabase.co";
+const SUPABASE_KEY="sb_publishable_8iv3CIQ3MaQ6E9oPgK6N8A_KTYGp-V6";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const DELIVERY_CATEGORY="__delivery_area__";
+let menuRows=[];
+const SITE_DEFAULT_ITEMS=[{"name": "شاي", "price": 500, "cat": "مشروبات ساخنة"}, {"name": "قهوة", "price": 1500, "cat": "مشروبات ساخنة"}, {"name": "جكليتة", "price": 1500, "cat": "مشروبات ساخنة"}, {"name": "هوت جوكليت", "price": 1500, "cat": "مشروبات ساخنة"}, {"name": "كابتشينو", "price": 1500, "cat": "مشروبات ساخنة"}, {"name": "قشطة", "price": 3500, "cat": "كنافة"}, {"name": "جبن", "price": 3000, "cat": "كنافة"}, {"name": "نوتيلا", "price": 3000, "cat": "كنافة"}, {"name": "بان كيك نوتيلا", "price": 3000, "cat": "بان كيك"}, {"name": "بان كيك فواكه", "price": 4000, "cat": "بان كيك"}, {"name": "ببلز نوتيلا", "price": 4000, "cat": "ببلز"}, {"name": "ببلز بستاشيو", "price": 4000, "cat": "ببلز"}, {"name": "ببلز سومر", "price": 5000, "cat": "ببلز"}, {"name": "عصير برتقال", "price": 2500, "cat": "عصائر"}, {"name": "عصير موز وحليب", "price": 2500, "cat": "عصائر"}, {"name": "موز وفراولة", "price": 2500, "cat": "عصائر"}, {"name": "موز ونوتيلا", "price": 2500, "cat": "عصائر"}, {"name": "كوكتيل فواكه", "price": 3000, "cat": "عصائر"}, {"name": "فرانشيسكو", "price": 3000, "cat": "عصائر"}, {"name": "نوتيلا", "price": 3000, "cat": "ميلك شيك"}, {"name": "اوريو", "price": 3000, "cat": "ميلك شيك"}, {"name": "لوتس", "price": 3000, "cat": "ميلك شيك"}, {"name": "بلو", "price": 2500, "cat": "موهيتو"}, {"name": "فراولة", "price": 2500, "cat": "موهيتو"}, {"name": "ليمون ونعناع", "price": 2500, "cat": "موهيتو"}, {"name": "كريب نوتيلا", "price": 4000, "cat": "كريب"}, {"name": "كريب لوتس", "price": 4000, "cat": "كريب"}, {"name": "كريب بستاشيو", "price": 4000, "cat": "كريب"}, {"name": "كريب فواكه", "price": 5000, "cat": "كريب"}, {"name": "تراب الملوك", "price": 1000, "cat": "حلويات"}, {"name": "بانا", "price": 1000, "cat": "حلويات"}, {"name": "كيك الحليب بالكراميل", "price": 2000, "cat": "حلويات"}, {"name": "دونات", "price": 1000, "cat": "حلويات"}, {"name": "تمن ومرق", "price": 2500, "cat": "المأكولات الشرقية"}, {"name": "ربع دجاج ناشف", "price": 3000, "cat": "المأكولات الشرقية"}, {"name": "لفة شاورما عالتمن", "price": 3500, "cat": "المأكولات الشرقية"}, {"name": "لفة كص لحم عالتمن", "price": 5000, "cat": "المأكولات الشرقية"}, {"name": "ربع دجاجة على التمن", "price": 5000, "cat": "المأكولات الشرقية"}, {"name": "نصف دجاج ناشف", "price": 6000, "cat": "المأكولات الشرقية"}, {"name": "نصف شاورما دجاج على التمن", "price": 6500, "cat": "المأكولات الشرقية"}, {"name": "نصف دجاجة على التمن", "price": 7500, "cat": "المأكولات الشرقية"}, {"name": "نصف نفر كص لحم على التمن", "price": 7500, "cat": "المأكولات الشرقية"}, {"name": "دجاج محشي", "price": 12000, "cat": "المأكولات الشرقية"}, {"name": "دجاج مشوي", "price": 9000, "cat": "المأكولات الشرقية", "priceLabel": "9,000 - 11,000"}, {"name": "دجاجة على التمن", "price": 12000, "cat": "المأكولات الشرقية", "priceLabel": "12,000 - 15,000"}, {"name": "بركر كلاسك", "price": 3000, "cat": "البركر"}, {"name": "الدبل", "price": 6000, "cat": "البركر"}, {"name": "بركر مشروم", "price": 4000, "cat": "البركر"}, {"name": "بركر دجاج", "price": 2000, "cat": "البركر"}, {"name": "ريزو كلاسك", "price": 5000, "cat": "الريزو"}, {"name": "صغير", "price": 3500, "cat": "الريزو"}, {"name": "ريزو مكسيكانو", "price": 5500, "cat": "الريزو"}, {"name": "ريزو جبن", "price": 6000, "cat": "الريزو"}, {"name": "ريزو اعشاب", "price": 6000, "cat": "الريزو"}, {"name": "بيتزا دجاج", "price": 5000, "cat": "البيتزا"}, {"name": "بيتزا خضار", "price": 5000, "cat": "البيتزا"}, {"name": "بيتزا ببيروني", "price": 5000, "cat": "البيتزا"}, {"name": "بيتزا لحم", "price": 6000, "cat": "البيتزا"}, {"name": "بيتزا فصول الاربعة", "price": 6000, "cat": "البيتزا"}, {"name": "سيزر", "price": 5000, "cat": "السلطات"}, {"name": "فتوش", "price": 4000, "cat": "السلطات"}, {"name": "تونة دايت", "price": 5000, "cat": "السلطات"}, {"name": "جرجير", "price": 4000, "cat": "السلطات"}, {"name": "كباب عراقي", "price": 12000, "cat": "المشاوي", "priceLabel": "12,000 / نص 7,000"}, {"name": "كباب دجاج", "price": 8000, "cat": "المشاوي", "priceLabel": "8,000 / نص 5,000"}, {"name": "تكة لحم", "price": 14000, "cat": "المشاوي", "priceLabel": "14,000 / نص 7,000"}, {"name": "مشكل عام", "price": 14000, "cat": "المشاوي", "priceLabel": "14,000 / نص 8,000"}, {"name": "محمر", "price": 10000, "cat": "المشاوي"}, {"name": "تكة دجاج", "price": 8000, "cat": "المشاوي", "priceLabel": "8,000 / نص 5,000"}, {"name": "اجنحة", "price": 8000, "cat": "المشاوي", "priceLabel": "8,000 / نص 5,000"}, {"name": "عرايس", "price": 7000, "cat": "المشاوي"}, {"name": "كيلو كباب لحم عراقي", "price": 25000, "cat": "كيلوات المشاوي", "priceLabel": "25,000 / نص كيلو 12,500"}, {"name": "كيلو كباب دجاج", "price": 20000, "cat": "كيلوات المشاوي", "priceLabel": "20,000 / نص 10,000"}, {"name": "كيلو مشكل لحم", "price": 30000, "cat": "كيلوات المشاوي", "priceLabel": "30,000 / نص 15,000"}, {"name": "وجبة كتكاتي عائلي 10 قطع", "price": 12000, "cat": "الكنتاكي"}, {"name": "كتكاتي 5 قطع", "price": 7000, "cat": "الكنتاكي"}, {"name": "كتكاتي 3 قطع", "price": 5000, "cat": "الكنتاكي"}, {"name": "فاهيتا لحم", "price": 5000, "cat": "السندويشات"}, {"name": "فاهيتا دجاج", "price": 4000, "cat": "السندويشات"}, {"name": "شرحات لحم", "price": 6000, "cat": "السندويشات"}, {"name": "شرحات لحم جبن", "price": 7000, "cat": "السندويشات"}, {"name": "جيلي كفتة", "price": 3000, "cat": "السندويشات"}, {"name": "جيلي كفتة جبن", "price": 4000, "cat": "السندويشات"}, {"name": "شاورما صمون", "price": 1000, "cat": "السندويشات"}, {"name": "شاورما كبس", "price": 2000, "cat": "السندويشات"}, {"name": "كص صمون", "price": 2000, "cat": "السندويشات"}, {"name": "كص كبس", "price": 2500, "cat": "السندويشات"}, {"name": "جكن ساندشر", "price": 3500, "cat": "السندويشات"}, {"name": "بيف ساندشر", "price": 4500, "cat": "السندويشات"}, {"name": "زنجر", "price": 2500, "cat": "المقرمشات"}, {"name": "سكالوب", "price": 3000, "cat": "المقرمشات"}, {"name": "توستر", "price": 3000, "cat": "المقرمشات"}, {"name": "جكن ستربس", "price": 3000, "cat": "المقرمشات"}, {"name": "صغير", "price": 1000, "cat": "فنكر"}, {"name": "دبل", "price": 2000, "cat": "فنكر"}, {"name": "جبن", "price": 3000, "cat": "فنكر"}, {"name": "فرايز جكن", "price": 5000, "cat": "فنكر"}, {"name": "مقبلات صغير", "price": 1000, "cat": "المقبلات"}, {"name": "وسط", "price": 2000, "cat": "المقبلات"}, {"name": "كبير", "price": 3000, "cat": "المقبلات"}, {"name": "ورق عنب صغير", "price": 2000, "cat": "المقبلات"}, {"name": "ورق عنب كبير", "price": 3000, "cat": "المقبلات"}, {"name": "دولمة", "price": 3000, "cat": "الأطباق"}, {"name": "كوردن بلو دجاج", "price": 12000, "cat": "الأطباق"}, {"name": "وجبة دجاج", "price": 5000, "cat": "وجبات صحية"}, {"name": "وجبة لحم", "price": 7500, "cat": "وجبات صحية"}, {"name": "بركر لحم دايت", "price": 3000, "cat": "وجبات صحية"}, {"name": "بركر دجاج دايت", "price": 2500, "cat": "وجبات صحية"}];
+
+function $(id){return document.getElementById(id)}
+
+function setMsg(id,text,type){
+  const el=$(id);
+  el.textContent=text||"";
+  el.className="msg "+(type||"");
+}
+
+function esc(v){
+  return String(v??"").replace(/[&<>"']/g,function(m){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m];
+  });
+}
+
+async function login(){
+  const email=$("email").value.trim();
+  const password=$("password").value;
+  if(!email||!password){setMsg("loginMsg","❌ اكتب الإيميل وكلمة السر","error");return}
+  $("loginBtn").disabled=true;
+  setMsg("loginMsg","⏳ جاري تسجيل الدخول...");
+  const {error}=await db.auth.signInWithPassword({email,password});
+  $("loginBtn").disabled=false;
+  if(error){setMsg("loginMsg","❌ "+error.message,"error");return}
+  showPanel();
+}
+
+async function logout(){
+  await db.auth.signOut();
+  location.reload();
+}
+
+function showPanel(){
+  $("login").classList.add("hidden");
+  $("panel").classList.remove("hidden");
+  load();
+  loadDelivery();
+}
+
+async function load(){
+  const box=$("items");
+  box.textContent="⏳ جاري تحميل الأصناف...";
+  const {data,error}=await db.from("menu_items")
+    .select("*")
+    .neq("category",DELIVERY_CATEGORY)
+    .order("id");
+
+  if(error){
+    box.textContent="❌ "+error.message;
+    return;
+  }
+
+  const rows=mergeSiteItems(data||[]);
+  $("count").textContent="عدد الأصناف: "+rows.length;
+
+  menuRows=rows;
+  populateCategoryFilter(rows);
+  renderItems();
+}
+
+function populateCategoryFilter(rows){
+  const select=$("categoryFilter"), current=select.value;
+  const cats=[...new Set(rows.map(x=>(x.category||"بدون قسم").trim()||"بدون قسم"))].sort((a,b)=>a.localeCompare(b,"ar"));
+  select.innerHTML='<option value="__all__">📂 كل الأقسام</option>'+cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  if(cats.includes(current)) select.value=current;
+}
+
+function renderItems(){
+  const box=$("items"), rows=menuRows||[];
+  const q=($("searchItems")?.value||"").trim().toLowerCase();
+  const selected=$("categoryFilter")?.value||"__all__";
+  const filtered=rows.filter(x=>{
+    const cat=(x.category||"بدون قسم").trim()||"بدون قسم";
+    return (selected==="__all__"||cat===selected) && (!q||String(x.name||"").toLowerCase().includes(q));
+  });
+  const missing=filtered.filter(x=>x.__missing);
+  $("count").textContent=`عدد الأصناف: ${filtered.length} — موجود بـSupabase: ${filtered.length-missing.length} — ناقص: ${missing.length}`;
+  $("syncMsg").textContent = missing.length
+    ? `⚠️ أكو ${missing.length} صنف موجود بالموقع لكنه غير موجود بـSupabase. مثل: ${missing.slice(0,4).map(x=>x.name).join("، ")}`
+    : "✅ كل أصناف الموقع موجودة بـSupabase ويمكن التحكم بها.";
+
+  if(!filtered.length){box.innerHTML="<small>لا توجد أصناف مطابقة.</small>";return;}
+  const groups={};
+  filtered.forEach(x=>{const c=(x.category||"بدون قسم").trim()||"بدون قسم";(groups[c] ||= []).push(x);});
+  box.innerHTML=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"ar")).map(cat=>`
+    <div class="category-group">
+      <div class="category-title">📂 ${esc(cat)} <span class="category-count">(${groups[cat].length} صنف)</span></div>
+      ${groups[cat].map(x=>{
+        const id=Number(x.id);
+        if(x.__missing){
+          return `<div class="item missing">
+            <b>${esc(x.name)}</b> <span class="missing-badge">غير موجود بـSupabase</span><br>
+            💰 ${Number(x.price)||0} د.ع<br>📂 ${esc(x.category||"بدون قسم")}
+            <div class="clear"></div>
+            
+<div class="actions">
+              <button class="green" onclick="addMissingItem(${x.__siteIndex})">➕ إضافة للتحكم</button>
+            </div>
+          </div>`;
+        }
+        return `<div class="item" data-item-id="${id}">${x.image_url?`<img src="${esc(x.image_url)}" alt="">`:""}
+          <b class="menu-name-text">${esc(x.name)}</b><br><span class="menu-price-text">💰 ${Number(x.price)||0} د.ع</span><br>📂 <span class="menu-desc-text">${esc(x.category||"بدون قسم")}</span><br>
+          ${x.available?"🟢 متوفر":"🔴 غير متوفر"}<div class="text-size-panel">
+<label>الاسم</label><select onchange="setItemTextSize(${id},'name',this.value)">
+<option value="16">16</option><option value="18" selected>18</option><option value="20">20</option><option value="22">22</option><option value="24">24</option><option value="26">26</option><option value="28">28</option><option value="30">30</option>
+</select>
+<label>السعر</label><select onchange="setItemTextSize(${id},'price',this.value)">
+<option value="12">12</option><option value="14">14</option><option value="16" selected>16</option><option value="18">18</option><option value="20">20</option><option value="22">22</option>
+</select>
+<label>الوصف</label><select onchange="setItemTextSize(${id},'desc',this.value)">
+<option value="12" selected>12</option><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option>
+</select>
+<button class="green" onclick="saveVisualTextSize(${id})">💾 تطبيق</button>
+</div><div class="clear"></div>
+          <div class="actions">
+            <button class="orange" onclick="editById(${id})">✏️ تعديل</button>
+            <button class="${x.available?"gray":"green"}" onclick="toggle(${id},${!!x.available})">${x.available?"إيقاف":"تشغيل"}</button>
+            <button class="danger" onclick="del(${id})">حذف</button>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>`).join("");
+}
+
+function mergeSiteItems(dbRows){
+  const out=[...(dbRows||[])];
+  const seen=new Set(out.map(x=>`${String(x.name||"").trim()}|${String(x.category||"").trim()}`));
+  SITE_DEFAULT_ITEMS.forEach((s,idx)=>{
+    const key=`${String(s.name||"").trim()}|${String(s.cat||"").trim()}`;
+    if(!seen.has(key)){
+      out.push({id:null,name:s.name,price:s.price,category:s.cat,image_url:"",available:true,__missing:true,__siteIndex:idx});
+    }
+  });
+  return out;
+}
+
+async function addMissingItem(siteIndex){
+  const s=SITE_DEFAULT_ITEMS[siteIndex];
+  if(!s)return;
+  const result=await db.from("menu_items").insert({
+    name:s.name, price:Number(s.price)||0, category:s.cat, image_url:"", available:true
+  }).select("*").single();
+  if(result.error){alert("❌ "+result.error.message);return;}
+  await load();
+}
+
+async function syncMissingItems(){
+  const missing=(menuRows||[]).filter(x=>x.__missing);
+  if(!missing.length){alert("✅ كل الأصناف موجودة أصلًا.");return;}
+  if(!confirm(`راح نضيف ${missing.length} صنف ناقص إلى Supabase. نكمل؟`))return;
+  const payload=missing.map(x=>({
+    name:x.name,price:Number(x.price)||0,category:x.category,image_url:"",available:true
+  }));
+  const result=await db.from("menu_items").insert(payload);
+  if(result.error){alert("❌ "+result.error.message);return;}
+  alert(`✅ تمت إضافة ${missing.length} صنف.`);
+  await load();
+}
+
+
+function clearForm(){
+  $("editId").value="";
+  $("name").value="";
+  $("price").value="";
+  $("category").value="";
+  $("image_url").value="";
+  $("available").checked=true;
+  $("title").textContent="➕ إضافة صنف";
+  setMsg("msg","");
+}
+
+async function save(){
+  const id=$("editId").value.trim();
+  const name=$("name").value.trim();
+  const priceText=$("price").value;
+  const category=$("category").value.trim();
+  const image_url=$("image_url").value.trim();
+  const price=priceText===""?0:Number(priceText);
+
+  if(!name){setMsg("msg","❌ اكتب اسم الصنف","error");return}
+  if(!Number.isFinite(price)||price<0){setMsg("msg","❌ السعر غير صحيح","error");return}
+
+  const obj={
+    name:name,
+    price:price,
+    category:category,
+    image_url:image_url,
+    available:$("available").checked
+  };
+
+  setMsg("msg","⏳ جاري الحفظ...");
+
+  const result=id
+    ?await db.from("menu_items").update(obj).eq("id",id)
+    :await db.from("menu_items").insert(obj);
+
+  if(result.error){
+    setMsg("msg","❌ "+result.error.message,"error");
+    return;
+  }
+
+  setMsg("msg","✅ تم الحفظ بنجاح","success");
+  clearForm();
+  await load();
+}
+
+async function toggle(id,current){
+  const result=await db.from("menu_items")
+    .update({available:!current})
+    .eq("id",id);
+
+  if(result.error){
+    alert("❌ "+result.error.message);
+    return;
+  }
+  await load();
+}
+
+async function del(id){
+  if(!confirm("متأكد من حذف الصنف؟"))return;
+
+  const result=await db.from("menu_items")
+    .delete()
+    .eq("id",id);
+
+  if(result.error){
+    alert("❌ "+result.error.message);
+    return;
+  }
+  await load();
+}
+
+async function loadDelivery(){
+  const box=$("deliveryList");
+  box.textContent="⏳ جاري تحميل المناطق...";
+
+  const {data,error}=await db.from("menu_items")
+    .select("*")
+    .eq("category",DELIVERY_CATEGORY)
+    .order("id");
+
+  if(error){
+    box.textContent="❌ "+error.message;
+    return;
+  }
+
+  const rows=data||[];
+
+  box.innerHTML=rows.map(function(x){
+    const id=Number(x.id);
+    return `
+      <div class="delivery-item">
+        <div class="info">
+          <div class="name">${esc(x.name)}</div>
+          <div class="fee">${Number(x.price)||0} د.ع</div>
+        </div>
+        <button class="gray" onclick="editDeliveryById(${id})">✏️ تعديل</button>
+        <button class="danger" onclick="deleteDelivery(${id})">حذف</button>
+      </div>`;
+  }).join("") || "<small>لا توجد مناطق مضافة.</small>";
+}
+
+async function addDelivery(){
+  const name=$("deliveryName").value.trim();
+  const fee=Number($("deliveryFee").value);
+
+  if(!name||!Number.isFinite(fee)||fee<0){
+    alert("اكتب اسم المنطقة وأجور التوصيل");
+    return;
+  }
+
+  const check=await db.from("menu_items")
+    .select("id")
+    .eq("category",DELIVERY_CATEGORY)
+    .eq("name",name)
+    .limit(1);
+
+  if(check.error){
+    alert("❌ "+check.error.message);
+    return;
+  }
+
+  if(check.data&&check.data.length){
+    alert("هذه المنطقة موجودة مسبقاً");
+    return;
+  }
+
+  const result=await db.from("menu_items").insert({
+    name:name,
+    price:Math.round(fee),
+    category:DELIVERY_CATEGORY,
+    available:true
+  });
+
+  if(result.error){
+    alert("❌ "+result.error.message);
+    return;
+  }
+
+  $("deliveryName").value="";
+  $("deliveryFee").value="";
+  setMsg("deliveryMsg","✅ تم إضافة المنطقة","success");
+  await loadDelivery();
+}
+
+async function editDeliveryById(id){
+  const {data,error}=await db.from("menu_items")
+    .select("*")
+    .eq("id",id)
+    .maybeSingle();
+
+  if(error){alert("❌ "+error.message);return}
+  if(!data){alert("❌ لم يتم العثور على المنطقة");return}
+
+  const name=prompt("اسم المنطقة",data.name||"");
+  if(name===null)return;
+
+  const feeText=prompt("أجور التوصيل بالدينار",Number(data.price)||0);
+  if(feeText===null)return;
+
+  const fee=Number(feeText);
+
+  if(!name.trim()||!Number.isFinite(fee)||fee<0){
+    alert("البيانات غير صحيحة");
+    return;
+  }
+
+  const result=await db.from("menu_items")
+    .update({
+      name:name.trim(),
+      price:Math.round(fee),
+      category:DELIVERY_CATEGORY,
+      available:true
+    })
+    .eq("id",id);
+
+  if(result.error){
+    alert("❌ "+result.error.message);
+    return;
+  }
+
+  await loadDelivery();
+}
+
+async function deleteDelivery(id){
+  if(!confirm("حذف منطقة التوصيل؟"))return;
+
+  const result=await db.from("menu_items")
+    .delete()
+    .eq("id",id);
+
+  if(result.error){
+    alert("❌ "+result.error.message);
+    return;
+  }
+
+  await loadDelivery();
+}
+
+db.auth.getSession().then(function(result){
+  if(result.data&&result.data.session)showPanel();
+});
+
+function applyItemTextSizes(card,nameSize,priceSize,descSize){
+  if(!card)return;
+  card.style.setProperty("--item-name-size",nameSize+"px");
+  card.style.setProperty("--item-price-size",priceSize+"px");
+  card.style.setProperty("--item-desc-size",descSize+"px");
+}
+function setItemTextSize(id,type,value){
+  const card=document.querySelector('[data-item-id="'+id+'"]');
+  if(!card)return;
+  const n=Math.max(10,Math.min(40,Number(value)||18));
+  if(type==="name") card.style.setProperty("--item-name-size",n+"px");
+  if(type==="price") card.style.setProperty("--item-price-size",n+"px");
+  if(type==="desc") card.style.setProperty("--item-desc-size",n+"px");
+}
+function saveVisualTextSize(id){
+  const card=document.querySelector('[data-item-id="'+id+'"]');
+  if(!card)return;
+  const values={
+    name:card.style.getPropertyValue("--item-name-size")||"18px",
+    price:card.style.getPropertyValue("--item-price-size")||"15px",
+    desc:card.style.getPropertyValue("--item-desc-size")||"13px"
+  };
+  localStorage.setItem("sumer_text_sizes_"+id,JSON.stringify(values));
+  alert("✅ تم تطبيق حجم النص. هذا التغيير ظاهر فورًا على الـAdmin.");
+}
+function loadVisualTextSize(id,card){
+  try{
+    const v=JSON.parse(localStorage.getItem("sumer_text_sizes_"+id)||"null");
+    if(v){
+      card.style.setProperty("--item-name-size",v.name||"18px");
+      card.style.setProperty("--item-price-size",v.price||"15px");
+      card.style.setProperty("--item-desc-size",v.desc||"13px");
+    }
+  }catch(e){}
+}
+
+</script>
+</body>
+</html>
